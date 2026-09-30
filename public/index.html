@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChainSeal | Hardware-rooted blockchain for tamper-proof real-world data</title>
+<meta name="description" content="ChainSeal signs sensor data inside a secure chip and anchors it on a ledger, so anyone can verify it with a QR scan. Smart India Hackathon 2026, SIH26211.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>ChainSeal</a>
+  <nav aria-label="Main">
+    <a href="#demo">Demo</a><a href="#live">Live</a><a href="#ledger">Ledger</a><a href="#how">How it works</a><a href="#tech">Technology</a><a href="#impact">Impact</a><a href="#team">Team</a>
+  </nav>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="hero-copy">
+    <p class="tag">Smart India Hackathon 2026 &middot; SIH26211 &middot; Blockchain &amp; Cybersecurity</p>
+    <h1>A blockchain can keep data unchanged. It cannot tell you the data was true.</h1>
+    <p class="lead">ChainSeal signs every sensor reading inside a secure chip, before anyone can touch it. Scan a QR code and see proof that nothing was forged or edited.</p>
+    <div class="cta"><a class="btn primary" href="#demo">Try the live demo</a><a class="btn" href="#how">See how it works</a></div>
+  </div>
+
+  <div class="panel" id="demo" aria-labelledby="demo-title">
+    <div class="panel-head">
+      <h2 id="demo-title">Seal a batch, then try to cheat</h2>
+      <span class="status" id="status" role="status">Not sealed</span>
+    </div>
+    <p class="hint">This runs real SHA-256 and ECDSA P-256 in your browser, the same steps the chip performs.</p>
+    <table class="readings">
+      <thead><tr><th>Reading</th><th>Value</th><th>SHA-256</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="root-box">
+      <div><span class="k">Merkle root</span><code id="root">-</code></div>
+      <div><span class="k">Signature</span><code id="sig">-</code></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btn-new">New readings</button>
+      <button class="btn primary" id="btn-seal">Seal batch</button>
+      <button class="btn warn" id="btn-tamper" disabled>Tamper with one reading</button>
+      <button class="btn" id="btn-verify" disabled>Verify</button>
+    </div>
+    <p class="result" id="result" aria-live="polite">Seal the batch to lock these readings under one signed root.</p>
+  </div>
+</section>
+
+<section class="wrap" id="live">
+  <h2>Live cold-chain telemetry</h2>
+  <p>A node streams readings, each one signed and checked by the server as it arrives. The shaded band is the safe range (2 to 8 &deg;C). Readings outside it become alerts on the record.</p>
+  <div class="panel small">
+    <canvas id="t-canvas" aria-label="Live temperature chart" role="img"></canvas>
+    <div class="t-stats"><div><span class="k">Signed and verified</span><b id="t-ok">0</b></div><div><span class="k">Rejected</span><b id="t-bad">0</b></div><div><span class="k">Waiting to seal</span><b id="t-pend">0</b></div><div><span class="k">Alerts</span><b id="t-alerts">0</b></div></div>
+    <div class="actions"><button class="btn primary" id="t-start">Start stream</button><button class="btn" id="t-stop" disabled>Stop</button><button class="btn" id="t-seal" disabled>Seal readings now</button></div>
+    <p class="result" id="t-result" aria-live="polite">Start the stream to watch signed readings arrive.</p>
+    <ul class="alerts" id="t-list"></ul>
+  </div>
+</section>
+
+<section class="wrap" id="ledger">
+  <h2>Live ledger</h2>
+  <p>The backend registers device keys, rejects bad signatures and replayed readings, batches readings into a Merkle root, and links each batch to the last one.</p>
+  <div class="ledger-grid">
+    <div class="panel small">
+      <div class="actions">
+        <button class="btn primary" id="l-create">Create sealed batch</button>
+        <button class="btn warn" id="l-tamper" disabled>Tamper stored data</button>
+        <button class="btn" id="l-verify" disabled>Verify batch</button>
+        <button class="btn" id="l-proof" disabled>Prove one reading</button>
+        <button class="btn" id="l-pass" disabled>NFT passport</button>
+      </div>
+      <p class="result" id="l-result" aria-live="polite">Create a batch. A simulated node signs four readings and the server seals them.</p>
+      <div class="stats" id="l-stats"></div>
+      <div class="qr-row"><img id="l-qr" alt="QR code linking to this batch's proof" width="140" height="140" hidden><div class="root-box"><div><span class="k">Batch</span><code id="l-id">-</code></div><div><span class="k">Merkle root</span><code id="l-root">-</code></div><div><span class="k">Block hash</span><code id="l-block">-</code></div></div></div>
+      <pre class="passport" id="l-json" hidden></pre>
+    </div>
+    <div class="panel small"><h3>Recent batches</h3><ul class="batches" id="l-list"><li class="note">Nothing sealed yet.</li></ul></div>
+  </div>
+</section>
+
+<section class="band" id="how">
+  <div class="wrap">
+    <h2>From sensor to QR in four steps</h2>
+    <ol class="steps">
+      <li><h3>Sense</h3><p>Temperature, humidity, GPS and shock readings from the node.</p></li>
+      <li><h3>Sign</h3><p>The ATECC608 chip hashes and signs each reading with a key that never leaves it.</p></li>
+      <li><h3>Seal</h3><p>A gateway batches readings into a Merkle root and anchors it on the ledger.</p></li>
+      <li><h3>Verify</h3><p>Anyone scans the QR and checks the signature and root, no account needed.</p></li>
+    </ol>
+    <div class="chips"><span>Keys stay in the chip</span><span>Works offline</span><span>QR proof</span></div>
+  </div>
+</section>
+
+<section class="wrap split" id="why">
+  <div>
+    <h2>Secure the source, not just the storage</h2>
+    <p>Most systems trust whoever types the data in. ChainSeal removes that step: the reading is signed by hardware at the moment it is measured, so a forged log or an edited record fails verification.</p>
+  </div>
+  <div class="table-wrap">
+    <table class="compare">
+      <thead><tr><th></th><th>ChainSeal</th><th>Software-only</th></tr></thead>
+      <tbody>
+        <tr><th>Data source</th><td>Signed in chip</td><td>Manual or app entry</td></tr>
+        <tr><th>Tampering</th><td>Forgery detectable</td><td>Editable before upload</td></tr>
+        <tr><th>Trust</th><td>Anyone can verify</td><td>Depends on the operator</td></tr>
+        <tr><th>Network</th><td>Offline-first</td><td>Mostly online</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band dark" id="tech">
+  <div class="wrap">
+    <h2>Technology</h2>
+    <div class="pipeline" aria-label="Data pipeline">
+      <div><b>Sensor node</b><span>ESP32 + ATECC608 + sensors</span></div>
+      <div><b>Gateway</b><span>Phone, LoRa or Wi-Fi; store-and-forward</span></div>
+      <div><b>Merkle batch</b><span>Readings hashed into one root</span></div>
+      <div><b>Ledger</b><span>Hyperledger Fabric; EVM testnet for NFT</span></div>
+      <div><b>Verifier</b><span>QR web app checks signature and root</span></div>
+    </div>
+    <div class="grid3">
+      <article><h3>Hardware</h3><ul><li>ESP32 with BLE and Wi-Fi</li><li>ATECC608 secure element, P-256 keys</li><li>Temperature, humidity, GPS, shock sensors</li><li>Li-Po battery and tamper switch</li></ul></article>
+      <article><h3>Software and chain</h3><ul><li>Firmware in C/C++ (Arduino or ESP-IDF)</li><li>Gateway and verifier in Flutter and Node.js</li><li>Hyperledger Fabric chaincode</li><li>Solidity ERC-721 batch passport</li></ul></article>
+      <article><h3>Security design</h3><ul><li>Device public keys in an on-chain registry</li><li>Only hashes on-chain; raw data encrypted off-chain</li><li>Replay-proof timestamps and nonce</li><li>Consent and DPDP-aligned storage</li></ul></article>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="feasible">
+  <h2>Feasible with off-the-shelf parts</h2>
+  <div class="split">
+    <div>
+      <p>Only hashes go on-chain, so fees stay low. The plan moves from a prototype to a campus or cold-chain pilot, then to multi-sector rollout.</p>
+      <h3>Challenges and how we handle them</h3>
+      <ul class="plain">
+        <li><b>Physical tampering, fake sensor input:</b> secure element, tamper switch, sensor sanity checks.</li>
+        <li><b>Weak connectivity, key provisioning at scale:</b> store-and-forward and Merkle batching.</li>
+        <li><b>Write cost and privacy rules:</b> permissioned ledger, personal data kept off-chain.</li>
+      </ul>
+    </div>
+    <div class="table-wrap">
+      <table class="cost">
+        <thead><tr><th>Node component</th><th>Est. cost (&#8377;)</th></tr></thead>
+        <tbody>
+          <tr><td>ESP32 board</td><td>350&ndash;450</td></tr>
+          <tr><td>ATECC608 secure element</td><td>100&ndash;200</td></tr>
+          <tr><td>Temp/humidity sensor</td><td>150&ndash;250</td></tr>
+          <tr><td>GPS module (optional)</td><td>300&ndash;400</td></tr>
+          <tr><td>Li-Po + charger</td><td>200&ndash;300</td></tr>
+          <tr><td>Enclosure, tamper switch, PCB</td><td>150&ndash;250</td></tr>
+        </tbody>
+        <tfoot><tr><th>Approx. total</th><th>&asymp; 1,250&ndash;1,850</th></tr></tfoot>
+      </table>
+      <p class="note">Estimates only; final bill of materials to be confirmed.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="impact">
+  <div class="wrap">
+    <h2>Impact and benefits</h2>
+    <div class="grid4">
+      <article><h3>Trust at source</h3><p>Data is signed by the device before it reaches the chain.</p></article>
+      <article><h3>Fraud reduction</h3><p>Tamper-evident records deter forged logs.</p></article>
+      <article><h3>Consumer confidence</h3><p>Scan a QR to see the verified journey.</p></article>
+      <article><h3>Provable quality</h3><p>Spoilage events are on record for fair disputes.</p></article>
+      <article><h3>Low cost</h3><p>Only hashes on-chain keeps fees minimal.</p></article>
+      <article><h3>Works offline</h3><p>Store-and-forward for weak networks.</p></article>
+      <article><h3>Open audit</h3><p>Any party verifies without trusting one authority.</p></article>
+      <article><h3>Scalable</h3><p>One node design, many sectors.</p></article>
+    </div>
+    <h3 class="sub">Sectors it can change</h3>
+    <div class="chips big"><span>Agriculture and food</span><span>Pharma and vaccine cold chain</span><span>Logistics and retail</span><span>Certificates and public records</span></div>
+    <p class="note">Social, economic and environmental gains: less spoilage, reusable hardware.</p>
+  </div>
+</section>
+
+<section class="wrap" id="refs">
+  <h2>Research and references</h2>
+  <ol class="refs">
+    <li>Nakamoto (2008), <a href="https://bitcoin.org/bitcoin.pdf" target="_blank" rel="noopener">Bitcoin: A Peer-to-Peer Electronic Cash System</a></li>
+    <li>Ethereum Foundation, <a href="https://ethereum.org/en/whitepaper/" target="_blank" rel="noopener">Ethereum Whitepaper</a></li>
+    <li>EIP-721, <a href="https://eips.ethereum.org/EIPS/eip-721" target="_blank" rel="noopener">ERC-721 Non-Fungible Token Standard</a></li>
+    <li>Hyperledger Fabric, <a href="https://hyperledger-fabric.readthedocs.io/" target="_blank" rel="noopener">Permissioned blockchain documentation</a></li>
+    <li>Microchip, <a href="https://www.microchip.com/en-us/product/ATECC608A" target="_blank" rel="noopener">ATECC608 CryptoAuthentication secure element</a></li>
+  </ol>
+</section>
+</main>
+
+<footer class="foot" id="team">
+  <div class="wrap">
+    <div><strong>Team Circuit Cartels</strong><p>ChainSeal for Smart India Hackathon 2026. Problem statement SIH26211, Hardware category.</p></div>
+    <p class="note">Demo video / GitHub link: <!-- add your links here --> coming soon</p>
+  </div>
+</footer>
+<script src="script.js"></script>
+<script src="ledger.js"></script>
+<script src="live.js"></script>
+</body>
+</html>
